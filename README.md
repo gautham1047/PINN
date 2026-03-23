@@ -2,6 +2,23 @@
 
 A finite-difference solver for parabolic (heat) and hyperbolic (wave) PDEs on non-rectangular 2D domains, using embedded boundary methods on Cartesian grids.
 
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <img src="demo/vibrating_drum.gif" alt="Vibrating drum" width="400"/>
+        <br/>
+        <em>Vibrating drum</em>
+      </td>
+      <td align="center">
+        <img src="demo/vibrating_drum_damped.gif" alt="Vibrating drum (damped)" width="400"/>
+        <br/>
+        <em>Vibrating drum (damped)</em>
+      </td>
+    </tr>
+  </table>
+</div>
+
 ## Features
 
 - **Irregular domains** via embedded Dirichlet mask boundaries (no mesh conforming required)
@@ -151,11 +168,3 @@ Damped wave equation `u_tt + 0.5·u_t = ∇²u` on same domain.
 
 ### CFL Condition (Leapfrog)
 Stability requires `Δt/h < 1/√2 ≈ 0.707`. With γ = 0.25, the K-P ghost-point stabilization ensures this extends to cells cut by curved boundaries.
-
----
-
-## Reference Documents
-
-- [`PLAN.md`](PLAN.md) — implementation roadmap and design decisions
-- [`embedded_fd_summary.md`](embedded_fd_summary.md) — summary of embedded FD methods (Shortley–Weller, Johansen–Colella, K-P)
-- [`kreiss_petersson_embedded_bc_guide.md`](kreiss_petersson_embedded_bc_guide.md) — detailed derivation of the K-P method used in `preprocess_kp`
