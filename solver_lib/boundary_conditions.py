@@ -11,7 +11,6 @@ from fd_coeffs import (
     normal_lagrange_weights,
 )
 
-
 class _GridProxy:
     """
     Minimal grid-like object used to evaluate a DirichletMask's mask_function

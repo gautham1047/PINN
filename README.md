@@ -6,12 +6,12 @@ A finite-difference solver for parabolic (heat) and hyperbolic (wave) PDEs on no
   <table>
     <tr>
       <td align="center">
-        <img src="demo/vibrating_drum.gif" alt="Vibrating drum" width="400"/>
+        <img src="README/solution.gif" alt="Vibrating drum" width="400"/>
         <br/>
         <em>Vibrating drum</em>
       </td>
       <td align="center">
-        <img src="demo/vibrating_drum_damped.gif" alt="Vibrating drum (damped)" width="400"/>
+        <img src="README/velocity.gif" alt="Vibrating drum (damped)" width="400"/>
         <br/>
         <em>Vibrating drum (damped)</em>
       </td>

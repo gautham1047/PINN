@@ -8,13 +8,11 @@ from matplotlib import animation
 from matplotlib.ticker import MaxNLocator
 from grid import Grid_2D
 
-
 # Animation settings
 DURATION = 5  # seconds
 REPEAT_DELAY = 100000  # ms
 CMAP = 'Wistia'
 VELOCITY_CMAP = 'viridis'
-
 
 def gen_anim(data: np.ndarray, grid: Grid_2D, file_name: str,
              z_label: str = "u", duration: float = DURATION) -> None:
