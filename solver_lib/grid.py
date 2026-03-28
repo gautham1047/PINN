@@ -394,7 +394,6 @@ class Grid_2D:
         self.values[mask.flatten()] = bc.dirichlet_value
         bc.get_pseudo_boundary_points(self, n)  # pre-warm cache
 
-
 class VelocityGrid(Grid_2D):
     """Grid_2D subclass that owns a velocity field for second-order (hyperbolic) PDEs.
 
