@@ -22,10 +22,10 @@ A finite-difference solver for parabolic (heat) and hyperbolic (wave) PDEs on no
 ## Features
 
 - **Irregular domains** via embedded Dirichlet mask boundaries (no mesh conforming required)
-- **Two wave-equation paths**: leapfrog with Kreiss–Petersson (K-P) ghost-point elimination (recommended) and legacy Newmark
+- **Two wave-equation paths**: Newmark scheme for normal boundaries and leapfrog using Kreiss–Petersson (K-P) ghost-point elimination for embedded
 - **Parabolic solvers**: forward Euler and RK4
 - **Symbolic PDE specification** via SymPy
-- **Animation output** (3D surface, MP4/GIF)
+- **Animation output** (3D surface, GIF)
 
 ---
 
@@ -39,7 +39,7 @@ Computes finite-difference coefficients from arbitrary stencils.
 |---|---|
 | `calculate_fd_coefficients(stencil, derivative_order)` | Vandermonde-based solver for arbitrary stencils |
 | `forward_difference()`, `central_difference()`, `backward_difference()` | Classic 1st/2nd-order FD generators |
-| `neumann_boundary_forward/backward(h, accuracy_order)` | Neumann BC enforcement at domain edges |
+| `neumann_boundary_forward/backward(h, accuracy_order)` | Helper function for Neumann BCs |
 | `dirichlet_pseudo_boundary_forward/backward(alpha_over_h, d, n)` | Fractional-step stencils for Dirichlet pseudo-boundary points |
 | `lagrange_weights(x_nodes, x_query)` | 3-point quadratic Lagrange interpolation weights |
 | `normal_lagrange_weights(xi_gamma, xi_I)` | Normal-direction weights for K-P embedded BC method |
@@ -49,7 +49,7 @@ Computes finite-difference coefficients from arbitrary stencils.
 ### [`grid.py`](grid.py) — Grid and Derivative Matrices
 
 #### `Grid_1D`
-Uniform 1D grid. Key methods:
+Uniform 1D grid, used to streamline Grid2D. Key methods:
 - `initialize_values(func, x_symbol)` — evaluate a symbolic function onto grid nodes
 - `derivative_matrix(order, accuracy_order, strategy)` — build FD derivative matrix; `strategy` is `'forward_central_backward'` or `'custom_stencil'`
 - `set_boundary_dirichlet()`, `set_boundary_neumann()`
@@ -63,7 +63,7 @@ Uniform 1D grid. Key methods:
 - `apply_dirichlet_mask(bc, n=1)` — enforce geometric mask BC; warms K-P pseudo-boundary cache
 
 #### `VelocityGrid(Grid_2D)`
-Adds a `velocity` flat array. Required by `solve_newmark()`; **deprecated for the leapfrog path**.
+Adds a `velocity` flat array. Required by `solve_newmark()`;
 
 ---
 
@@ -140,7 +140,7 @@ Convenience subclass: `WaveEquation(c, gamma=0)` builds `u_tt + γ·u_t = c^2 �
 
 ### [`vibrating_drum.py`](vibrating_drum.py)
 Undamped circular drum, radius 1, on a 40×40 grid.
-- Wave speed c = 1, time span [0, 5], 300 steps (CFL ≈ 0.75 < 1/√2 ✓)
+- Wave speed c = 1, time span [0, 5], 300 steps
 - IC: Gaussian bump `exp(−(x²+y²)/(2·0.3²))`, zero initial velocity
 - BC: `DirichletMask` (zero on circle boundary)
 - Solver: `solve_leapfrog(gamma=0.25)`
