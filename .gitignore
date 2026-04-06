@@ -1,6 +1,8 @@
 *.png
 *.gif
+*.mp4
 *.pyc
 *.json
 !README/
 !README/**
+test*

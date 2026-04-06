@@ -24,8 +24,7 @@ t_points = 300
 out_dir = os.path.join(os.path.dirname(__file__), 'vibrating_drum_damped')
 os.makedirs(out_dir, exist_ok=True)
 
-equation = WaveEquation(c=c, gamma=0.5) # dampening coeff = 0.5
-x, y, _, _ = equation.getSymbols() # for the mask function
+equation, (x, y, _, _) = WaveEquation(c=c, gamma=0.5)  # dampening coeff = 0.5
 
 # Create grid
 grid = VelocityGrid(x_points, y_points, x_i, x_f, y_i, y_f, accuracy_order=2, strategy='custom_stencil')

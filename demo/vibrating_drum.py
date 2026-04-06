@@ -20,12 +20,13 @@ x_i, x_f = (-drum_radius, drum_radius)
 y_i, y_f = (-drum_radius, drum_radius)
 t_i, t_f = (0, 5.0)
 
-x_points = 40
-y_points = 40
-t_points = 500
+s = 3
 
-equation = WaveEquation(c)
-x, y, _, _ = equation.getSymbols()
+x_points = 40 * s
+y_points = 40 * s
+t_points = 500 * s
+
+equation, (x, y, _, _) = WaveEquation(c)
 
 grid = Grid_2D(x_points, y_points, x_i, x_f, y_i, y_f,
                accuracy_order=2, strategy='custom_stencil')
@@ -54,8 +55,8 @@ solver = Solver(
 )
 
 h = grid.x_grid.delta
-cfl = c * solver.t_delta / h
-print(f"CFL = c·Δt/h = {cfl:.4f}  (must be < {1/np.sqrt(2):.4f} for stability)")
+cfl = solver.t_delta / h
+print(f"CFL = Δt/h = {cfl:.4f}  (must be < {1/np.sqrt(2):.4f} for stability)")
 if cfl >= 1.0 / np.sqrt(2):
     print("bad CFL condition - Reduce t_points or increase grid resolution.")
 
@@ -64,4 +65,11 @@ solution = solver.solve_leapfrog(gamma=0.25)
 
 print("animating...")
 
-solver.animate(f'{out_dir}/solution.gif')
+from time import time
+
+start = time()
+solver.animate(f'{out_dir}/solution2.mp4', stride=4 * s, spatial_stride=s)
+print(f"3D mp4 done in {time() - start:.2f} seconds")
+start = time()
+solver.animate(f'{out_dir}/solution2_2d.mp4', output_type="2D", stride=4 * s, spatial_stride=s)
+print(f"2D mp4 done in {time() - start:.2f} seconds")

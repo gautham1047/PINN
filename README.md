@@ -25,13 +25,13 @@ A finite-difference solver for parabolic (heat) and hyperbolic (wave) PDEs on no
 - **Two wave-equation paths**: leapfrog with Kreiss–Petersson (K-P) ghost-point elimination (recommended) and legacy Newmark
 - **Parabolic solvers**: forward Euler and RK4
 - **Symbolic PDE specification** via SymPy
-- **Animation output** (3D surface, MP4/GIF)
+- **Animation output**: 3D surface and 2D heatmap backends, MP4/GIF, with time and spatial stride
 
 ---
 
 ## File Overview
 
-### [`fd_coeffs.py`](fd_coeffs.py) — FD Coefficient Helpers
+### [`fd_coeffs.py`](solver_lib/fd_coeffs.py) — FD Coefficient Helpers
 
 Computes finite-difference coefficients from arbitrary stencils.
 
@@ -46,7 +46,7 @@ Computes finite-difference coefficients from arbitrary stencils.
 
 ---
 
-### [`grid.py`](grid.py) — Grid and Derivative Matrices
+### [`grid.py`](solver_lib/grid.py) — Grid and Derivative Matrices
 
 #### `Grid_1D`
 Uniform 1D grid. Key methods:
@@ -67,7 +67,7 @@ Adds a `velocity` flat array. Required by `solve_newmark()`; **deprecated for th
 
 ---
 
-### [`boundary_conditions.py`](boundary_conditions.py) — BC Specification
+### [`boundary_conditions.py`](solver_lib/boundary_conditions.py) — BC Specification
 
 #### `BoundaryConditions`
 Axis-aligned Dirichlet/Neumann on 4 rectangle edges. Detects time-dependence automatically via `inspect.signature`.
@@ -87,7 +87,7 @@ Geometric mask BC for irregular domains. `mask_function(grid)` returns a bool ar
 
 ---
 
-### [`differential_equation.py`](differential_equation.py) — Symbolic PDE
+### [`differential_equation.py`](solver_lib/differential_equation.py) — Symbolic PDE
 
 #### `DifferentialEquation`
 Parses a SymPy RHS expression for a linear PDE.
@@ -96,12 +96,28 @@ Parses a SymPy RHS expression for a linear PDE.
 - `get_coefficient(dx_order, dy_order)`, `get_source_term()`
 - `is_parabolic`, `is_hyperbolic` — properties
 
-#### `WaveEquation(DifferentialEquation)`
-Convenience subclass: `WaveEquation(c, gamma=0)` builds `u_tt + γ·u_t = c^2 ∇^2 u`.
+#### Factory functions
+
+Instead of subclasses, built-in PDEs are created via factory functions that return `(equation, (x, y, t, u))`:
+
+```python
+equation, (x, y, t, u) = HeatEquation(alpha=0.05)
+# du/dt = alpha * (d²u/dx² + d²u/dy²)
+
+equation, (x, y, t, u) = WaveEquation(c=1.0, gamma=0.0)
+# d²u/dt² + gamma·du/dt = c²(d²u/dx² + d²u/dy²)
+```
+
+The returned symbols `(x, y, t, u)` are the SymPy objects used to write initial conditions and source terms. Discard with `_` any symbols you don't need:
+
+```python
+equation, (x, y, _, _) = HeatEquation(alpha=0.1)
+initial_u = sin(pi * x) * sin(pi * y)
+```
 
 ---
 
-### [`solver.py`](solver.py) — Time-Stepping
+### [`solver.py`](solver_lib/solver.py) — Time-Stepping
 
 #### `Solver`
 `Solver(equation, grid, bc, t_i, t_f, t_points, initial_condition, initial_velocity=None)`
@@ -119,8 +135,18 @@ Convenience subclass: `WaveEquation(c, gamma=0)` builds `u_tt + γ·u_t = c^2 �
 **Accessors:**
 - `get_solution_2d(step)`, `get_solution_at_time(idx)`
 - `get_velocity_2d(step)`, `get_velocity_at_time(idx)`
-- `animate()`, `animate_velocity()`
 - `reset()`
+
+**Animation:**
+```python
+solver.animate(file_name, z_label="u", duration=5.0,
+               output_type="3D",   # "3D" trisurf or "2D" heatmap
+               stride=1,           # render every nth time step
+               spatial_stride=1,   # sample every nth grid point
+               output_params=None) # ffmpeg flags for .mp4
+
+solver.animate_velocity(file_name, ...)  # same signature, no z_label
+```
 
 **Internal helpers:**
 - `compute_dudt(u_values, time)` — evaluates PDE RHS by summing coefficient × derivative-matrix products + source
@@ -129,27 +155,63 @@ Convenience subclass: `WaveEquation(c, gamma=0)` builds `u_tt + γ·u_t = c^2 �
 
 ---
 
-### [`animate.py`](animate.py) — Animation
+### [`animate.py`](solver_lib/animate.py) — Animation Backends
 
-- `gen_anim(data, grid, file_name, z_label="u", duration=5.0)` — 3D `plot_trisurf` animation over solution history; colormap `'Wistia'`
-- `gen_velocity_anim(velocity_data, grid, file_name, duration=5.0)` — same for velocity; colormap `'viridis'`
+Two backends are available. Both support `.gif` and `.mp4` output; MP4 uses H.264 via ffmpeg (requires `imageio-ffmpeg`).
+
+#### Matplotlib 3-D (`gen_anim`, `gen_velocity_anim`)
+Renders a `plot_trisurf` surface at each frame via `FuncAnimation`. Gives a 3-D perspective view. Slower for large grids due to full geometry rebuild per frame.
+
+#### Fast 2-D (`gen_anim_fast`, `gen_velocity_anim_fast`)
+Renders a 2-D heatmap using `imshow`. The figure is built once; only pixel data is updated per frame, so matplotlib's layout overhead runs exactly once. Significantly faster than the 3-D backend.
+
+- Colormap: `seismic` (blue→white→red) for displacement — diverging palette makes the sign of oscillation immediately visible
+- Colormap: `RdYlBu_r` for velocity
+
+#### Common parameters
+
+| Parameter | Description |
+|---|---|
+| `file_name` | Output path — `.gif` or `.mp4` |
+| `duration` | Total animation length in seconds |
+| `stride` | Render every nth time step (e.g. `stride=2` halves frame count) |
+| `spatial_stride` | Sample every nth grid point in x and y (3-D backend also supported) |
+| `output_params` | ffmpeg argument list for `.mp4`; default `["-preset", "ultrafast", "-crf", "23"]` |
+
+#### Speed benchmark
+
+```bash
+cd solver_lib
+python test_animation_speed.py --nx 30 --ny 30 --frames 50
+```
+
+Expected ordering fastest→slowest: `fast (mp4)` → `fast (gif)` → `matplotlib (mp4)` → `matplotlib (gif)`
 
 ---
 
 ## Example Scripts
 
-### [`vibrating_drum.py`](vibrating_drum.py)
-Undamped circular drum, radius 1, on a 40×40 grid.
-- Wave speed c = 1, time span [0, 5], 300 steps (CFL ≈ 0.75 < 1/√2 ✓)
-- IC: Gaussian bump `exp(−(x²+y²)/(2·0.3²))`, zero initial velocity
+### [`vibrating_drum.py`](demo/vibrating_drum.py)
+Undamped circular drum, radius 1, on a high-resolution grid.
+- Wave speed c = 1, time span [0, 5], K-P leapfrog solver
+- IC: Gaussian bump, zero initial velocity
 - BC: `DirichletMask` (zero on circle boundary)
-- Solver: `solve_leapfrog(gamma=0.25)`
-- Output: `vibrating_drum/vibrating_drum_solution.gif`
+- Output: MP4 in `demo/vibrating_drum/` (3-D and 2-D)
 
-### [`vibrating_drum_damped.py`](vibrating_drum_damped.py)
-Damped wave equation `u_tt + 0.5·u_t = ∇²u` on same domain.
+### [`vibrating_drum_damped.py`](demo/vibrating_drum_damped.py)
+Damped wave equation `u_tt + 0.5·u_t = ∇²u` on the same domain.
 - Solver: `solve_newmark(beta=0.25, gamma=0.5)` with `VelocityGrid`
-- Outputs displacement + velocity animations: `vibrating_drum/vibrating_drum_damped_*.gif`
+- Outputs displacement + velocity animations
+
+### [`heat_equation_dirichlet.py`](demo/heat_equation_dirichlet.py)
+Heat equation on `[0,1]²` with zero Dirichlet BCs on all edges.
+- IC: `sin(πx)sin(πy)` — exact solution decays as `exp(−2π²αt)`
+- Solver: RK4
+
+### [`heat_equation_neumann.py`](demo/heat_equation_neumann.py)
+Heat equation with mixed BCs: Dirichlet on x-edges (`u=0` at x=0, `u=1` at x=1), Neumann on y-edges.
+- IC: linear profile `x` plus a y-localised Gaussian bump
+- Solver: RK4
 
 ---
 

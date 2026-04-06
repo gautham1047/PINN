@@ -23,8 +23,7 @@ x_points = 25
 y_points = 25
 t_points = 200
 
-equation = HeatEquation(alpha=alpha)
-x, y, _, _ = equation.getSymbols()
+equation, (x, y, _, _) = HeatEquation(alpha=alpha)
 
 grid = Grid_2D(x_points, y_points, x_i, x_f, y_i, y_f, accuracy_order=2, strategy='custom_stencil')
 

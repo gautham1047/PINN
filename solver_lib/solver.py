@@ -5,7 +5,8 @@ import sympy as sp
 from grid import Grid_2D, VelocityGrid
 from boundary_conditions import BoundaryConditions, DirichletMask
 from differential_equation import DifferentialEquation
-from animate import gen_anim, gen_velocity_anim
+from animate import (gen_anim, gen_velocity_anim,
+                     gen_anim_fast, gen_velocity_anim_fast)
 
 # Type alias for initial conditions
 InitialConditionType = Union[sp.Expr, Callable[[np.ndarray, np.ndarray], np.ndarray], int, float]
@@ -275,15 +276,54 @@ class Solver:
                 "explicitly. Use solve_newmark() if velocity data is required.")
         return self.velocity_history[time_index].reshape((self.grid.y_points, self.grid.x_points))
 
-    def animate(self, file_name: str, z_label: str = "u", duration: float = 5.0) -> None:
-        gen_anim(self.solution_history, self.grid, file_name, z_label, duration)
+    def animate(self, file_name: str, z_label: str = "u", duration: float = 5.0,
+                output_type: str = "3D", stride: int = 1, spatial_stride: int = 1,
+                output_params: list = None) -> None:
+        """Render solution history to an animation file.
 
-    def animate_velocity(self, file_name: str, duration: float = 5.0) -> None:
+        Parameters
+        ----------
+        file_name : str        — output path (.gif or .mp4)
+        z_label : str          — z-axis / colorbar label
+        duration : float       — animation length in seconds
+        output_type : str      — ``"3D"`` or ``"2D"``
+        stride : int           — render every nth time step
+        spatial_stride : int   — sample every nth grid point in x and y
+        output_params : list   — ffmpeg flags for .mp4;
+                                 None → ["-preset", "ultrafast", "-crf", "23"]
+        """
+        if output_type == "2D":
+            gen_anim_fast(self.solution_history, self.grid, file_name, z_label,
+                          duration, stride, spatial_stride, output_params)
+        else:
+            gen_anim(self.solution_history, self.grid, file_name, z_label,
+                     duration, stride, spatial_stride, output_params)
+
+    def animate_velocity(self, file_name: str, duration: float = 5.0,
+                         output_type: str = "3D", stride: int = 1,
+                         spatial_stride: int = 1,
+                         output_params: list = None) -> None:
+        """Render velocity history to an animation file.
+
+        Parameters
+        ----------
+        file_name : str        — output path (.gif or .mp4)
+        duration : float       — animation length in seconds
+        output_type : str      — ``"3D"`` or ``"2D"``
+        stride : int           — render every nth time step
+        spatial_stride : int   — sample every nth grid point in x and y
+        output_params : list   — ffmpeg flags for .mp4
+        """
         if self.velocity_history is None:
             raise AttributeError(
                 "Velocity history not available. solve_leapfrog() does not track velocity "
                 "explicitly. Use solve_newmark() if velocity data is required.")
-        gen_velocity_anim(self.velocity_history, self.grid, file_name, duration)
+        if output_type == "2D":
+            gen_velocity_anim_fast(self.velocity_history, self.grid, file_name,
+                                   duration, stride, spatial_stride, output_params)
+        else:
+            gen_velocity_anim(self.velocity_history, self.grid, file_name,
+                              duration, stride, spatial_stride, output_params)
 
     # ------------------------------------------------------------------
     # Leapfrog helpers and solver
