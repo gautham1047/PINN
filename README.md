@@ -108,13 +108,6 @@ equation, (x, y, t, u) = WaveEquation(c=1.0, gamma=0.0)
 # d²u/dt² + gamma·du/dt = c²(d²u/dx² + d²u/dy²)
 ```
 
-The returned symbols `(x, y, t, u)` are the SymPy objects used to write initial conditions and source terms. Discard with `_` any symbols you don't need:
-
-```python
-equation, (x, y, _, _) = HeatEquation(alpha=0.1)
-initial_u = sin(pi * x) * sin(pi * y)
-```
-
 ---
 
 ### [`solver.py`](solver_lib/solver.py) — Time-Stepping
@@ -130,7 +123,7 @@ initial_u = sin(pi * x) * sin(pi * y)
 - `solve_leapfrog(gamma=0.25)` — explicit leapfrog using the precomputed K-P matrix:
   `u^{n+1} = 2u^n − u^{n-1} + Δt² [A u^n + b(t_n) + F(t_n)]`
   Requires `DirichletMask` and time-independent c². Uses `u^{-1} = u^0 − Δt·u1` for 2nd-order startup.
-- `solve_newmark(beta, gamma)` — implicit Newmark; requires `VelocityGrid`. Tracks explicit velocity history. *(Legacy)*
+- `solve_newmark(beta, gamma)` — implicit Newmark; requires `VelocityGrid`. Tracks explicit velocity history.
 
 **Accessors:**
 - `get_solution_2d(step)`, `get_solution_at_time(idx)`
@@ -165,10 +158,7 @@ Renders a `plot_trisurf` surface at each frame via `FuncAnimation`. Gives a 3-D 
 #### Fast 2-D (`gen_anim_fast`, `gen_velocity_anim_fast`)
 Renders a 2-D heatmap using `imshow`. The figure is built once; only pixel data is updated per frame, so matplotlib's layout overhead runs exactly once. Significantly faster than the 3-D backend.
 
-- Colormap: `seismic` (blue→white→red) for displacement — diverging palette makes the sign of oscillation immediately visible
-- Colormap: `RdYlBu_r` for velocity
-
-#### Common parameters
+#### parameters
 
 | Parameter | Description |
 |---|---|
@@ -177,15 +167,6 @@ Renders a 2-D heatmap using `imshow`. The figure is built once; only pixel data 
 | `stride` | Render every nth time step (e.g. `stride=2` halves frame count) |
 | `spatial_stride` | Sample every nth grid point in x and y (3-D backend also supported) |
 | `output_params` | ffmpeg argument list for `.mp4`; default `["-preset", "ultrafast", "-crf", "23"]` |
-
-#### Speed benchmark
-
-```bash
-cd solver_lib
-python test_animation_speed.py --nx 30 --ny 30 --frames 50
-```
-
-Expected ordering fastest→slowest: `fast (mp4)` → `fast (gif)` → `matplotlib (mp4)` → `matplotlib (gif)`
 
 ---
 
@@ -212,21 +193,3 @@ Heat equation on `[0,1]²` with zero Dirichlet BCs on all edges.
 Heat equation with mixed BCs: Dirichlet on x-edges (`u=0` at x=0, `u=1` at x=1), Neumann on y-edges.
 - IC: linear profile `x` plus a y-localised Gaussian bump
 - Solver: RK4
-
----
-
-## Architecture Notes
-
-### Two Wave-Equation Paths
-
-| | Leapfrog (K-P) | Newmark (legacy) |
-|---|---|---|
-| Grid | `Grid_2D` | `VelocityGrid` |
-| Boundaries | `DirichletMask` (arbitrary curved) | `BoundaryConditions` (axis-aligned only) |
-| Wave speed | Must be time-independent | Can vary |
-| Damping | Not supported | Supported |
-| Velocity history | Not tracked | Tracked |
-| Accuracy | O(Δx², Δt²), CFL < 1/√2 | Unconditionally stable (β=0.25) |
-
-### CFL Condition (Leapfrog)
-Stability requires `Δt/h < 1/√2 ≈ 0.707`. With γ = 0.25, the K-P ghost-point stabilization ensures this extends to cells cut by curved boundaries.
